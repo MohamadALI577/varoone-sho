@@ -25,11 +25,31 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Create www folder and move web files
+        run: |
+          mkdir -p www
+          cp index.html www/
+          cp -r assets www/ 2>/dev/null || true
+          cp -r fonts www/ 2>/dev/null || true
+          cp -r music www/ 2>/dev/null || true
+          cp -r res www/ 2>/dev/null || true
+          cp -r resource www/ 2>/dev/null || true
+
+      - name: Update capacitor.config.json webDir
+        run: |
+          cat > capacitor.config.json << 'EOF'
+          {
+            "appId": "com.gabasstudio.varoone",
+            "appName": "وارونه شو",
+            "webDir": "www",
+            "android": {
+              "allowMixedContent": true
+            }
+          }
+          EOF
+
       - name: Install Capacitor
         run: npm install
-
-      - name: Init Capacitor
-        run: npx cap init "varoone" "com.gabasstudio.varoone" --web-dir="."
 
       - name: Add Android platform
         run: npx cap add android
@@ -44,7 +64,8 @@ jobs:
       - name: Add Tapsell SDK to build.gradle
         run: |
           sed -i "/dependencies {/a\\    implementation 'ir.tapsell.sdk:tapsell-sdk-android:4.9.10'" android/app/build.gradle
-          echo -e "\nrepositories { maven { url 'https://maven.tapsell.ir' } }" >> android/app/build.gradle
+          echo "" >> android/app/build.gradle
+          echo "repositories { maven { url 'https://maven.tapsell.ir' } }" >> android/app/build.gradle
 
       - name: Add network security config to AndroidManifest
         run: |
