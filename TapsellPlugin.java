@@ -8,6 +8,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import ir.tapsell.sdk.Tapsell;
 import ir.tapsell.sdk.TapsellAdRequestListener;
 import ir.tapsell.sdk.TapsellAdRequestOptions;
+import ir.tapsell.sdk.TapsellAdShowListener;
 import ir.tapsell.sdk.TapsellShowOptions;
 
 @CapacitorPlugin(name = "Tapsell")
@@ -58,14 +59,21 @@ public class TapsellPlugin extends Plugin {
         showOptions.setShowDialog(false);
 
         activity.runOnUiThread(() ->
-            Tapsell.showAd(activity, adId, showOptions,
-                (adId1, completed, rewarded) -> {
-                    call.resolve();
-                    preloadAd();
-                },
-                error -> {
-                    call.resolve();
-                    preloadAd();
+            Tapsell.showAd(activity, ZONE_ID, adId, showOptions,
+                new TapsellAdShowListener() {
+                    @Override public void onOpened() {}
+                    @Override
+                    public void onClosed() {
+                        call.resolve();
+                        preloadAd();
+                    }
+                    @Override
+                    public void onError(String message) {
+                        call.resolve();
+                        preloadAd();
+                    }
+                    @Override
+                    public void onRewarded(boolean completed) {}
                 })
         );
     }
