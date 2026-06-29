@@ -65,13 +65,31 @@ jobs:
         run: |
           sed -i "/dependencies {/a\\    implementation 'ir.tapsell.sdk:tapsell-sdk-android:4.9.10'" android/app/build.gradle
 
-      - name: Add mavenCentral to repositories
+      - name: Add Tapsell maven repository
         run: |
-          sed -i "/repositories {/a\\        mavenCentral()" android/build.gradle
+          sed -i "/repositories {/a\\        maven { url 'https://maven.tapsell.ir' }" android/build.gradle
 
       - name: Add network security config to AndroidManifest
         run: |
           sed -i 's/<application/<application android:networkSecurityConfig="@xml\/network_security_config"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Install ImageMagick and copy app icon
+        run: |
+          sudo apt-get install -y imagemagick 2>/dev/null || true
+          ICO_SRC="res/icon/android/icon.png"
+          if [ -f "$ICO_SRC" ]; then
+            for size in "48:mdpi" "72:hdpi" "96:xhdpi" "144:xxhdpi" "192:xxxhdpi"; do
+              px="${size%%:*}"
+              dpi="${size##*:}"
+              DIR="android/app/src/main/res/mipmap-${dpi}"
+              mkdir -p "$DIR"
+              convert "$ICO_SRC" -resize "${px}x${px}" "$DIR/ic_launcher.png"
+              convert "$ICO_SRC" -resize "${px}x${px}" "$DIR/ic_launcher_round.png"
+            done
+            echo "✅ آیکون کپی شد"
+          else
+            echo "⚠️ آیکون پیدا نشد: $ICO_SRC"
+          fi
 
       - name: Sync Capacitor
         run: npx cap sync android
