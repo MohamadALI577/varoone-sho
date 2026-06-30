@@ -1,8 +1,0 @@
-{
-  "appId": "com.gabasstudio.varoone",
-  "appName": "وارونه شو",
-  "webDir": ".",
-  "android": {
-    "allowMixedContent": true
-  }
-}
