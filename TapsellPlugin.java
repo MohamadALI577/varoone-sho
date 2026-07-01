@@ -14,60 +14,110 @@ import ir.tapsell.sdk.TapsellAdShowListener;
 @CapacitorPlugin(name = "Tapsell")
 public class TapsellPlugin extends Plugin {
 
-    private static final String APP_KEY = "gdhscnltdkcpogoiaordilgklofikahpdibdjkceqfitkrqdnndlntdpsogmolcobsqitp";
-    private static final String ZONE_ID = "6a416d364d35e6311e8779a2";
-    private String cachedAdId = null;
+    private static final String APP_KEY =
+        "gdhscnltdkcpogoiaordilgklofikahpdibdjkceqfitkrqdnndlntdpsogmolcobsqitp";
+    private static final String ZONE_INTERSTITIAL = "6a416d364d35e6311e8779a2";
+    private static final String ZONE_REWARD       = "6a42ffff90ea0065a20547e7";
+
+    private String cachedInterstitialId = null;
+    private String cachedRewardId       = null;
 
     @Override
     public void load() {
-        Activity activity = getActivity();
-        Tapsell.initialize(activity.getApplication(), APP_KEY);
-        preloadAd();
+        Tapsell.initialize(getActivity().getApplication(), APP_KEY);
+        preloadInterstitial();
+        preloadReward();
     }
 
-    private void preloadAd() {
-        Activity activity = getActivity();
-        Tapsell.requestAd(activity, ZONE_ID,
+    private void preloadInterstitial() {
+        Tapsell.requestAd(getActivity(), ZONE_INTERSTITIAL,
             new TapsellAdRequestOptions(),
             new TapsellAdRequestListener() {
-                @Override
-                public void onAdAvailable(String adId) {
-                    cachedAdId = adId;
+                @Override public void onAdAvailable(String adId) {
+                    cachedInterstitialId = adId;
                 }
-                @Override
-                public void onError(String message) {
-                    cachedAdId = null;
+                @Override public void onError(String msg) {
+                    cachedInterstitialId = null;
+                }
+            });
+    }
+
+    private void preloadReward() {
+        Tapsell.requestAd(getActivity(), ZONE_REWARD,
+            new TapsellAdRequestOptions(),
+            new TapsellAdRequestListener() {
+                @Override public void onAdAvailable(String adId) {
+                    cachedRewardId = adId;
+                }
+                @Override public void onError(String msg) {
+                    cachedRewardId = null;
                 }
             });
     }
 
     @PluginMethod
     public void showInterstitial(PluginCall call) {
-        Activity activity = getActivity();
-        if (cachedAdId == null) {
+        if (cachedInterstitialId == null) {
             call.resolve();
-            preloadAd();
+            preloadInterstitial();
             return;
         }
-        String adId = cachedAdId;
-        cachedAdId = null;
+        String adId = cachedInterstitialId;
+        cachedInterstitialId = null;
 
-        activity.runOnUiThread(() ->
-            Tapsell.showAd(activity, ZONE_ID, adId, null,
+        getActivity().runOnUiThread(() ->
+            Tapsell.showAd(getActivity(), ZONE_INTERSTITIAL, adId, null,
                 new TapsellAdShowListener() {
                     @Override public void onOpened() {}
-                    @Override
-                    public void onClosed() {
+                    @Override public void onClosed() {
                         call.resolve();
-                        preloadAd();
+                        preloadInterstitial();
                     }
-                    @Override
-                    public void onError(String message) {
+                    @Override public void onError(String msg) {
                         call.resolve();
-                        preloadAd();
+                        preloadInterstitial();
                     }
-                    @Override
-                    public void onRewarded(boolean completed) {}
+                    @Override public void onRewarded(boolean c) {}
+                })
+        );
+    }
+
+    @PluginMethod
+    public void showRewardAd(PluginCall call) {
+        if (cachedRewardId == null) {
+            JSObject r = new JSObject();
+            r.put("completed", false);
+            r.put("available", false);
+            call.resolve(r);
+            preloadReward();
+            return;
+        }
+        String adId = cachedRewardId;
+        cachedRewardId = null;
+
+        final boolean[] rewarded = {false};
+
+        getActivity().runOnUiThread(() ->
+            Tapsell.showAd(getActivity(), ZONE_REWARD, adId, null,
+                new TapsellAdShowListener() {
+                    @Override public void onOpened() {}
+                    @Override public void onClosed() {
+                        JSObject r = new JSObject();
+                        r.put("completed", rewarded[0]);
+                        r.put("available", true);
+                        call.resolve(r);
+                        preloadReward();
+                    }
+                    @Override public void onError(String msg) {
+                        JSObject r = new JSObject();
+                        r.put("completed", false);
+                        r.put("available", false);
+                        call.resolve(r);
+                        preloadReward();
+                    }
+                    @Override public void onRewarded(boolean c) {
+                        if (c) rewarded[0] = true;
+                    }
                 })
         );
     }
